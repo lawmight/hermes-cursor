@@ -89,8 +89,7 @@ def launch_cursor_bridge(sdk: Any, *, workspace: str) -> Any:
         original_env_builder = bridge_module._bridge_subprocess_env
     except (AttributeError, ImportError) as exc:
         if module_name == "cursor_sdk":
-            # TODO(sdk-1.x): if 1.0.27 dropped this hook, replace with the
-            # public env override (or a documented alternative) before shipping.
+            # Confirmed present on 1.0.27; hard-fail if a future pin drops it.
             raise RuntimeError(
                 "cursor-sdk no longer exposes the bridge environment hook "
                 "(_bridge_subprocess_env); refusing to launch with "
@@ -108,11 +107,10 @@ def launch_cursor_bridge(sdk: Any, *, workspace: str) -> Any:
             return client_cls.launch_bridge(
                 workspace=workspace,
                 # Run-scoped SDK RPCs (wait/cancel/conversation) carry only a
-                # run id and 0.1.9 rejects them when this client-side guard is
-                # disabled. The bridge environment is sanitized above, so
-                # allowing the SDK's owned-bridge path cannot expose or fall
-                # back to a process-environment API key; agent/get-run calls
-                # still pass credentials explicitly.
+                # run id; older SDKs reject them when this client-side guard is
+                # disabled. Env is sanitized above, so allowing the owned-bridge
+                # path cannot leak Hermes secrets; agent/get-run still pass
+                # credentials explicitly.
                 allow_api_key_env_fallback=True,
             )
         finally:

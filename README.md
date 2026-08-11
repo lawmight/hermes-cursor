@@ -33,7 +33,8 @@ python3 -m pip install -e '.[sdk]'
 
 # If your Hermes build gates plugins:
 hermes plugins list
-hermes plugins enable hermes-cursor
+hermes plugins enable hermes-cursor   # plugins are opt-in
+# debug discovery: HERMES_PLUGINS_DEBUG=1 hermes plugins list
 ```
 
 The drop-in root contains `plugin.yaml` + `__init__.py` with `register(ctx)`.
@@ -85,9 +86,11 @@ Inside a Hermes session, load the bundled skill (name may be namespaced by
 your Hermes build):
 
 ```text
-skill_view("cursor-cloud")
-# or: skill_view("hermes-cursor:cursor-cloud")
+skill_view("hermes-cursor:cursor-cloud")
 ```
+
+Bare `skill_view("cursor-cloud")` is reserved for built-ins; plugin skills are
+namespaced and opt-in (not listed in the system prompt skill index).
 
 ## Dependencies
 
