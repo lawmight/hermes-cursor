@@ -127,36 +127,113 @@ def _print_agent_row(info: Any) -> None:
         print(f"      {summary}")
 
 
+def _assistant_text_from_message(message: Any) -> str:
+    """Extract plain assistant text from an SDKMessage-like object."""
+    if str(_attr(message, "type")) != "assistant":
+        return ""
+    inner = _attr(message, "message") or {}
+    chunks: list[str] = []
+    for block in _attr(inner, "content") or []:
+        if _attr(block, "type") == "text":
+            text = _attr(block, "text")
+            if text:
+                chunks.append(str(text))
+    return "".join(chunks)
+
+
+def _terminal_result_text(run: Any, final: Any = None) -> str:
+    """Best-effort final assistant text after a run ends."""
+    for source in (final, run):
+        if source is None:
+            continue
+        for key in ("result", "text"):
+            value = _attr(source, key, None)
+            if value is None:
+                continue
+            if callable(value):
+                try:
+                    value = value()
+                except Exception:
+                    continue
+            text = str(value or "").strip()
+            if text:
+                return text
+    return ""
+
+
+def _pick_latest_run(items: list[Any]) -> Any:
+    """Prefer the newest run; list_runs order is not guaranteed."""
+    if not items:
+        return None
+    if len(items) == 1:
+        return items[0]
+
+    def sort_key(run: Any) -> tuple:
+        created = str(_attr(run, "created_at") or "")
+        run_id = str(_attr(run, "id") or "")
+        return (created, run_id)
+
+    return sorted(items, key=sort_key)[-1]
+
+
 def _stream_run(run: Any) -> str:
-    """Print a run's stream messages as they arrive; return terminal status."""
+    """Print a run's stream; always surface terminal assistant text if missing.
+
+    Detached cloud follows often yield only ``status`` events even when
+    ``supports("stream")`` is true — the first-run assistant text then lives
+    on ``run.wait().result``. Always fall back to that so ``follow`` matches
+    ``send --follow``.
+    """
+    printed_assistant = False
     try:
-        for message in run.messages():
-            msg_type = str(_attr(message, "type"))
-            if msg_type == "assistant":
-                inner = _attr(message, "message") or {}
-                for block in _attr(inner, "content") or []:
-                    if _attr(block, "type") == "text":
-                        text = _attr(block, "text")
-                        if text:
-                            print(text, end="", flush=True)
-            elif msg_type == "tool_call":
-                status = _attr(message, "status")
-                if status == "running":
-                    print(f"\n[tool] {_attr(message, 'name')} ...", flush=True)
-            elif msg_type == "status":
-                status_text = _attr(message, "status")
-                if status_text:
-                    print(f"\n[status] {status_text}", flush=True)
+        stream = None
+        if callable(getattr(run, "messages", None)):
+            stream = run.messages()
+        elif callable(getattr(run, "stream", None)):
+            stream = run.stream()
+        if stream is not None:
+            for message in stream:
+                msg_type = str(_attr(message, "type"))
+                if msg_type == "assistant":
+                    text = _assistant_text_from_message(message)
+                    if text:
+                        print(text, end="", flush=True)
+                        printed_assistant = True
+                elif msg_type == "tool_call":
+                    status = _attr(message, "status")
+                    if status == "running":
+                        print(f"\n[tool] {_attr(message, 'name')} ...", flush=True)
+                elif msg_type == "status":
+                    status_text = _attr(message, "status")
+                    if status_text:
+                        print(f"\n[status] {status_text}", flush=True)
     except KeyboardInterrupt:
         print("\n(stream detached — the cloud run keeps going; "
               "reattach with `hermes cursor follow <id>`)")
         return "detached"
-    print()
+
+    final = None
     try:
-        result = run.wait()
-        return str(_attr(result, "status") or _attr(run, "status") or "finished")
+        if callable(getattr(run, "wait", None)):
+            final = run.wait()
     except Exception:
-        return str(_attr(run, "status") or "unknown")
+        final = None
+
+    if not printed_assistant:
+        terminal_text = _terminal_result_text(run, final)
+        if terminal_text:
+            # Leading newline if we already printed status lines.
+            print(terminal_text, flush=True)
+        else:
+            print()
+    else:
+        print()
+
+    return str(
+        _attr(final, "status")
+        or _attr(run, "status")
+        or "finished"
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -283,9 +360,14 @@ def cmd_launch(args) -> int:
     try:
         sdk = _get_sdk()
         with _open_client(sdk) as client:
-            create_kwargs: dict[str, Any] = {"api_key": api_key, "cloud": cloud}
-            if args.model:
-                create_kwargs["model"] = args.model
+            # cursor-sdk 1.x cloud create requires model (missing_model).
+            # "default" is the account default selection alias.
+            model = (args.model or "").strip() or "default"
+            create_kwargs: dict[str, Any] = {
+                "api_key": api_key,
+                "cloud": cloud,
+                "model": model,
+            }
             if args.name:
                 create_kwargs["name"] = args.name
             agent = client.agents.create(**create_kwargs)
@@ -367,11 +449,12 @@ def cmd_follow(args) -> int:
                 runtime="cloud",
                 api_key=api_key,
             )
-            items = _attr(runs, "items", None) or []
+            items = list(_attr(runs, "items", None) or [])
             if not items:
                 return _fail(f"no runs found for {args.agent_id}")
+            latest = _pick_latest_run(items)
             run = client.agents.get_run(
-                _attr(items[0], "id"),
+                _attr(latest, "id"),
                 {
                     "runtime": "cloud",
                     "agentId": args.agent_id,
@@ -379,26 +462,13 @@ def cmd_follow(args) -> int:
                 },
             )
 
-            print(f"following {args.agent_id} (Ctrl+C detaches without cancelling)")
-            supports = getattr(run, "supports", None)
-            can_stream = bool(supports("stream")) if callable(supports) else True
-            if can_stream:
-                status = _stream_run(run)
-            else:
-                print(
-                    "(live event replay is unavailable for this detached run; "
-                    "waiting for its terminal result)",
-                    flush=True,
-                )
-                final = run.wait()
-                terminal_text = str(
-                    _attr(final, "result") or _attr(run, "result") or ""
-                )
-                if terminal_text:
-                    print(terminal_text, flush=True)
-                status = str(
-                    _attr(final, "status") or _attr(run, "status") or "finished"
-                )
+            print(
+                f"following {args.agent_id} run {_attr(latest, 'id')} "
+                f"(Ctrl+C detaches without cancelling)"
+            )
+            # Always use _stream_run: it falls back to wait().result when the
+            # detached replay only emits status events (common on first follow).
+            status = _stream_run(run)
     except Exception as exc:
         return _fail(f"follow failed: {exc}")
     except KeyboardInterrupt:
@@ -609,7 +679,10 @@ def setup_parser(subparser) -> None:
     launch.add_argument("prompt", help="Task prompt for the cloud agent")
     launch.add_argument("--repo", default="", help="Repository URL to clone into the VM")
     launch.add_argument("--ref", default="", help="Starting ref/branch (default: repo default)")
-    launch.add_argument("--model", default="", help="Model id (default: account default)")
+    launch.add_argument(
+        "--model", default="default",
+        help="Model id (default: 'default' = account default; required by cursor-sdk 1.x)",
+    )
     launch.add_argument("--name", default="", help="Human-readable agent name")
     launch.add_argument("--pr", action="store_true", help="Open a PR when the run finishes")
     launch.add_argument(

@@ -25,10 +25,11 @@ Prefer a throwaway key for the first pass. Cloud `launch` is billable.
 - [ ] `hermes cursor repos` → connected SCM repos (or clear empty)
 - [ ] `hermes cursor list` → agents list (may be empty)
 - [ ] `hermes cursor launch "Reply with exactly CURSOR_SMOKE_OK and stop" --repo <connected-repo-url> --ref main`
+  - `--model` defaults to `default` (account default); override with `--model <id>` if needed
   - Capture `bc-…` id
   - Prefer a tiny public/private repo Tom owns; avoid production
 - [ ] `hermes cursor status bc-…` → progresses / finishes (pass `runtime=cloud` internally if needed)
-- [ ] `hermes cursor follow bc-…` → streams to terminal result; look for `CURSOR_SMOKE_OK`
+- [ ] `hermes cursor follow bc-…` → shows assistant text (falls back to `wait().result` if stream is status-only); look for `CURSOR_SMOKE_OK`
 - [ ] `hermes cursor send bc-… "Confirm still CURSOR_SMOKE_OK" --follow`
 - [ ] `hermes cursor artifacts bc-…` → lists or empty (OK)
 - [ ] `hermes cursor cancel bc-…` on a deliberately long launch (optional interrupt path)
