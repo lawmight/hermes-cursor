@@ -10,7 +10,7 @@ readme = "README.md"
 requires-python = ">=3.10"
 license = { text = "MIT" }
 authors = [
-  { name = "lawmight / Tom Coustols", email = "tom@lawmight.dev" },
+  { name = "lawmight / Tom Coustols" },
 ]
 keywords = ["hermes", "hermes-agent", "cursor", "cursor-sdk", "plugin"]
 classifiers = [
