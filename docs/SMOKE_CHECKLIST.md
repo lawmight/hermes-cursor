@@ -61,5 +61,5 @@ Only if testing **local** SDK agents (`runtime: local`):
 | C | skill loads; CLI reachable from session |
 | D | no Hermes secret leakage; hook absence fails closed |
 
-**Do not** claim `model.provider=cursor` in any promo or README after smoke.
+**Do not** claim `model.provider=cursor` in README or docs after smoke.
 Report results + any API field mismatches back through Chief of Staff.

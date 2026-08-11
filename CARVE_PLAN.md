@@ -9,7 +9,7 @@ Draft in-tree provider (do not rebase): [fork PR #1](https://github.com/lawmight
 
 ## Proposed repo name
 
-**`lawmight/hermes-cursor`** (pip: `hermes-cursor`, Discord promo name: "Hermes Cursor plugin")
+**`lawmight/hermes-cursor`** (pip: `hermes-cursor`)
 
 Alternates if taken / naming conflict with ACP: `hermes-cursor-models`, `hermes-cursor-sdk`.
 
@@ -79,7 +79,7 @@ MVP = **Footprint Ladder rungs 2–4** (#70140 Phase 1): CLI + skill (+ optional
 1. **Scaffold + carve plan** (this doc) — done locally under `/workspace/hermes-cursor-plugin`
 2. **MVP package**: `register()` → CLI + skill; REST-only verbs without SDK; lazy SDK import for launch/follow
 3. **SDK 1.x cutover** on session/CLI paths; kill or replace private bridge patch
-4. **Publish**: create `lawmight/hermes-cursor`, pip metadata, Discord `#plugins-skills-and-skins` promo copy
+4. **Publish**: create `lawmight/hermes-cursor`, pip metadata (no Discord promo — Tom declined)
 5. **Optional later**: experimental provider module *only if* #70140 decides ProviderProfile is OK *or* a tiny generic external-runtime seam lands upstream (separate issue, not bundled Cursor code)
 
 ## Blockers
