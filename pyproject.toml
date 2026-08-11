@@ -1,0 +1,55 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "hermes-cursor"
+version = "0.1.0"
+description = "Standalone Hermes plugin: Cursor cloud agents via hermes cursor CLI + cursor-cloud skill"
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+authors = [
+  { name = "lawmight / Tom Coustols", email = "tom@lawmight.dev" },
+]
+keywords = ["hermes", "hermes-agent", "cursor", "cursor-sdk", "plugin"]
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Intended Audience :: Developers",
+  "License :: OSI Approved :: MIT License",
+  "Programming Language :: Python :: 3",
+  "Topic :: Software Development :: Libraries",
+]
+# Core plugin has no hard deps — Hermes host provides the plugin context.
+# REST verbs (me/models) use stdlib urllib only.
+dependencies = []
+
+[project.optional-dependencies]
+sdk = [
+  "cursor-sdk==1.0.27",
+]
+dev = [
+  "pytest>=7.0",
+  "PyYAML>=6.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/lawmight/hermes-cursor"
+Issues = "https://github.com/lawmight/hermes-cursor/issues"
+Upstream = "https://github.com/NousResearch/hermes-agent/issues/70140"
+
+[project.entry-points."hermes_agent.plugins"]
+hermes-cursor = "hermes_cursor:register"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+hermes_cursor = [
+  "plugin.yaml",
+  "skills/*/SKILL.md",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]

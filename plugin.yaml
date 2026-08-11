@@ -1,0 +1,9 @@
+name: hermes-cursor
+version: 0.1.0
+description: Cursor cloud agents via hermes cursor CLI + cursor-cloud skill (community plugin)
+author: lawmight / Tom Coustols
+requires_env:
+  - name: CURSOR_API_KEY
+    description: "Cursor Dashboard → Integrations → API Keys (user or service-account key)"
+    url: "https://cursor.com/dashboard?tab=integrations"
+    secret: true
