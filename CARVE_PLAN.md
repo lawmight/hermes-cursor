@@ -71,7 +71,7 @@ MVP = **Footprint Ladder rungs 2–4** (#70140 Phase 1): CLI + skill (+ optional
 | Legacy pin | `cursor-sdk==0.1.9` |
 | Target pin | `cursor-sdk==1.0.27` (PyPI latest 2026-08-06; shared version with `@cursor/sdk` since 1.0.24) |
 | Public surface | `Agent.create` / `resume`, `LocalAgentOptions` / `CloudAgentOptions`, `Cursor.models.list`, `get_usage` — broadly compatible |
-| Highest risk | Private bridge env sanitization in `cursor_bridge.py`; must retest or replace before 1.x ship |
+| Highest risk | Private bridge env sanitization — **still present on 1.0.27** (retested 2026-08-12); no public `env=` yet; keep hard-fail if hook vanishes |
 | Auth | Dashboard / service-account `CURSOR_API_KEY` only (OAuth from #40876 cannot unlock SDK) |
 
 ## Phased delivery

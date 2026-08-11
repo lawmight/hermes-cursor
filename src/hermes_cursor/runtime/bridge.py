@@ -2,15 +2,11 @@
 
 Adapted from the legacy in-tree ``agent/transports/cursor_bridge.py``.
 
-**SDK 1.x risk (TODO):** cursor-sdk 0.1.9 exposed a private
-``_bridge_subprocess_env`` hook that this module monkey-patches so Hermes
-secrets are not leaked into Cursor's model-driven shell. cursor-sdk 1.0.x
-may rename, remove, or replace that hook. Before claiming 1.x green:
-
-1. Retest ``launch_cursor_bridge`` against ``cursor-sdk==1.0.27``.
-2. Prefer a public ``env=`` / options override if the SDK adds one.
-3. If the private hook is gone, refuse to launch rather than leaking
-   ``os.environ`` (see RuntimeError path below).
+**SDK 1.x status (checked 2026-08-12 against ``cursor-sdk==1.0.27``):**
+the private ``_bridge_subprocess_env`` hook and
+``CursorClient.launch_bridge(..., allow_api_key_env_fallback=...)`` still
+exist. There is still no public ``env=`` override — keep the monkey-patch
+and the hard-fail path if the hook disappears. Re-check on every pin bump.
 """
 
 from __future__ import annotations
@@ -75,8 +71,8 @@ def _hermes_subprocess_env() -> dict[str, str]:
 def launch_cursor_bridge(sdk: Any, *, workspace: str) -> Any:
     """Launch cursor-sdk with a sanitized subprocess environment.
 
-    cursor-sdk 0.1.9 copies ``os.environ`` internally and exposes no ``env=``
-    argument. Patch its private environment builder only for the duration of
+    cursor-sdk 0.1.9–1.0.27 copies ``os.environ`` internally and exposes no
+    public ``env=`` argument. Patch its private environment builder only for the duration of
     the synchronized launch. This does not mutate process-global
     ``os.environ``.
 
